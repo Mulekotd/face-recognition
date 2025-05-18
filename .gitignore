@@ -1,0 +1,10 @@
+# Environment directory
+/.env/
+
+# Python cache directory
+/__pycache__/
+__pycache__/
+*.py[cod]
+
+# Database directory
+/database/
