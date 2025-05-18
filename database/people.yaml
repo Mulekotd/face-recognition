@@ -1,0 +1,5 @@
+- id: 001
+  name: Joao Pedro Silverio Gama
+  age: 20
+  images:
+    - 'cdn/images/001/my_image.jpeg'
