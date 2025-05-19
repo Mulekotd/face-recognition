@@ -1,65 +1,46 @@
 import cv2 as cv
 import dlib
 import numpy as np
+import uuid
 import yaml
 import os
 
-from threading import Thread, Lock
 from queue import Queue
+from threading import Thread
 
 # === CONFIG ===
 WINDOW_TITLE = 'Face Recognition'
 YAML_PATH = 'database/people.yaml'
 
 THRESHOLD = 0.5
-FRAME_SKIP = 192
+FRAME_SKIP = 256
 
 # === MODELS ===
 face_detector = dlib.get_frontal_face_detector()
 shape_predictor = dlib.shape_predictor('models/shape_predictor_68_face_landmarks.dat')
 face_rec_model = dlib.face_recognition_model_v1('models/dlib_face_recognition_resnet_model_v1.dat')
 
-# === THREADING ===
-class RecognitionThread(Thread):
-    def __init__(self, database):
-        super().__init__()
-        self.database = database
-        self.input_queue = Queue()
-        self.result = "Processando..."
-        self.lock = Lock()
-        self.daemon = True
-        self.start()
-
-    def run(self):
-        while True:
-            embedding = self.input_queue.get()
-            name = "Desconhecido"
-
-            for person in self.database:
-                for db_emb in person['embeddings']:
-                    if calculate_norm(embedding, db_emb) <= THRESHOLD:
-                        name = person['name']
-                        break
-
-                if name != "Desconhecido":
-                    break
-
-            with self.lock:
-                self.result = name
-
-    def recognize(self, embedding):
-        self.input_queue.queue.clear()
-        self.input_queue.put(embedding)
-
-    def get_result(self):
-        with self.lock:
-            return self.result
-
 # === UTILS ===
-def calculate_norm(embedding, db_emb):
-    return round(np.linalg.norm(embedding - db_emb), 2)
+def recognize_embedding(embedding, database, threshold=THRESHOLD):
+    if not database:
+        return "Processando..."
 
-# === LOAD DATABASE ===
+    best_match = None
+    best_distance = float('inf')
+
+    for person in database:
+        for db_emb in person.get('embeddings', []):
+            similarity = np.linalg.norm(embedding - db_emb)
+
+            if similarity < best_distance:
+                best_distance = similarity
+                best_match = person['name']
+
+    if best_distance <= threshold:
+        return best_match
+
+    return "Desconhecido"
+
 def process_image(image_path, result_queue):
     full_path = os.path.join('database', image_path)
     img = cv.imread(full_path)
@@ -67,7 +48,7 @@ def process_image(image_path, result_queue):
     if img is None:
         result_queue.put(None)
         return
-    
+
     rgb_img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     dets = face_detector(rgb_img)
 
@@ -98,6 +79,7 @@ def load_database(yaml_path):
 
         while not result_queue.empty():
             emb = result_queue.get()
+
             if emb is not None:
                 embeddings.append(emb)
 
@@ -105,33 +87,82 @@ def load_database(yaml_path):
 
     return people
 
-database = load_database(YAML_PATH)
-recognizer = RecognitionThread(database)
+def match_faces(previous_faces, current_dets, max_distance=50):
+    matches = []
 
-# === START CAMERA ===
+    for det in current_dets:
+        x, y = det.left(), det.top()
+
+        best_match = None
+        best_distance = float('inf')
+
+        for face in previous_faces:
+            px, py = face["rect"].left(), face["rect"].top()
+            dist = np.linalg.norm([x - px, y - py])
+
+            if dist < best_distance and dist < max_distance:
+                best_match = face
+                best_distance = dist
+
+        matches.append((det, best_match))
+
+    return matches
+
+# === MAIN ===
+database = []
+database_loaded = False
+
+def load_database_async():
+    global database, database_loaded
+    database = load_database(YAML_PATH)
+    database_loaded = True
+
+Thread(target=load_database_async).start()
+
 cam = cv.VideoCapture(0)
 frame_count = 0
+face_data_list = []
 
 while True:
-    _, frame = cam.read()
+    ret, frame = cam.read()
+
+    if not ret:
+        break
 
     rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
     dets = face_detector(rgb_frame)
 
-    for det in dets:
-        x, y, x2, y2 = det.left(), det.top(), det.right(), det.bottom()
+    matches = match_faces(face_data_list, dets)
+    updated_face_data = []
 
+    for det, matched_face in matches:
+        x, y, x2, y2 = det.left(), det.top(), det.right(), det.bottom()
         cv.rectangle(frame, (x, y), (x2, y2), (255, 255, 0), 2)
 
-        if frame_count % FRAME_SKIP == 0:
+        if matched_face:
+            matched_face["rect"] = det
+            face_data = matched_face
+        else:
             shape = shape_predictor(rgb_frame, det)
             face_descriptor = face_rec_model.compute_face_descriptor(rgb_frame, shape)
+            embedding = np.array(face_descriptor)
 
-            live_embedding = np.array(face_descriptor)
-            recognizer.recognize(live_embedding)
+            if database_loaded:
+                name = recognize_embedding(embedding, database)
+            else:
+                name = "Carregando..."
 
-        matched_name = recognizer.get_result()
-        cv.putText(frame, matched_name, (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+            face_data = {
+                "uid": str(uuid.uuid4()),
+                "rect": det,
+                "name": name
+            }
+
+        updated_face_data.append(face_data)
+
+        cv.putText(frame, face_data["name"], (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+    face_data_list = updated_face_data
 
     cv.imshow(WINDOW_TITLE, frame)
 

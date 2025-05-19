@@ -10,7 +10,7 @@ A face recognition system built using Python and popular computer vision librari
 
 Used as the main programming language to implement the recognition logic and threading for performance.
 
-![Python](https://images.seeklogo.com/logo-png/27/2/python-logo-png_seeklogo-273830.png)
+![Python](https://icon2.cleanpng.com/20180429/czw/avtvh8khw.webp)
 
 ---
 
