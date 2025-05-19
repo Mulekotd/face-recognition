@@ -42,6 +42,7 @@ def recognize_embedding(embedding, database, threshold=THRESHOLD):
     return "Desconhecido"
 
 def process_image(image_path, result_queue):
+    image_path = image_path.replace('\\', os.sep).replace('/', os.sep)
     full_path = os.path.join('database', image_path)
     img = cv.imread(full_path)
 
@@ -167,6 +168,9 @@ while True:
     cv.imshow(WINDOW_TITLE, frame)
 
     if cv.waitKey(1) & 0xFF == 27:
+        break
+
+    if cv.getWindowProperty(WINDOW_TITLE, cv.WND_PROP_VISIBLE) < 1:
         break
 
     frame_count += 1
