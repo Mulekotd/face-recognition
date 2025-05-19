@@ -41,9 +41,9 @@ def recognize_embedding(embedding, database, threshold=THRESHOLD):
 
     return "Desconhecido"
 
+# TODO: Refatorar função para que ela analise mais de uma imagem do banco de dados
 def process_image(image_path, result_queue):
-    image_path = image_path.replace('\\', os.sep).replace('/', os.sep)
-    full_path = os.path.join('database', image_path)
+    full_path = os.path.join('database', *image_path.split('/'))
     img = cv.imread(full_path)
 
     if img is None:
@@ -53,12 +53,13 @@ def process_image(image_path, result_queue):
     rgb_img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     dets = face_detector(rgb_img)
 
-    if dets:
-        shape = shape_predictor(rgb_img, dets[0])
-        face_descriptor = face_rec_model.compute_face_descriptor(rgb_img, shape)
-        result_queue.put(np.array(face_descriptor))
-    else:
+    if not dets:
         result_queue.put(None)
+        return
+
+    shape = shape_predictor(rgb_img, dets[0])
+    face_descriptor = face_rec_model.compute_face_descriptor(rgb_img, shape)
+    result_queue.put(np.array(face_descriptor))
 
 def load_database(yaml_path):
     with open(yaml_path, 'r', encoding='utf-8') as f:

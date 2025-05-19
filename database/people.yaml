@@ -2,6 +2,6 @@
   name: Joao Pedro Silverio Gama
   age: 20
   images:
-    - 'images/001/my_img_01.jpeg'
-    - 'images/001/my_img_02.jpg'
-    - 'images/001/my_img_03.jpeg'
+    - 'images/001/img-01.jpeg'
+    # - 'images/001/img-02.jpg'
+    # - 'images/001/img-03.jpeg'
