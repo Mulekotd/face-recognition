@@ -1,7 +1,20 @@
 - id: 001
-  name: Joao Pedro Silverio Gama
-  age: 20
+  name: Joao Pedro
   images:
     - 'images/001/img-01.jpeg'
     # - 'images/001/img-02.jpg'
-    # - 'images/001/img-03.jpeg'
+
+- id: 002
+  name: Pedro
+  images:
+    - 'images/002/img-01.png'
+
+- id: 003
+  name: Matheus
+  images:
+    - 'images/003/img-01.jpeg'
+
+- id: 004
+  name: Carolina
+  images:
+    - 'images/004/img-01.jpg'
