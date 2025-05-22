@@ -32,7 +32,6 @@ def recognize_embedding(embedding, database, threshold=THRESHOLD):
     for person in database:
         for db_emb in person.get('embeddings', []):
             similarity = np.linalg.norm(embedding - db_emb)
-            
             if similarity < best_distance:
                 best_distance = similarity
                 best_match = person['name']
@@ -71,14 +70,13 @@ def load_database(yaml_path):
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             results = executor.map(process_image, image_paths)
 
-        for emb in results:
-            if emb is not None:
-                embeddings.append(emb)
+            for emb in results:
+                if emb is not None:
+                    embeddings.append(emb)
 
         person['embeddings'] = embeddings
 
-    return people
-
+        yield person
 
 def match_faces(previous_faces, current_dets, max_distance=50):
     matches = []
@@ -100,14 +98,14 @@ def match_faces(previous_faces, current_dets, max_distance=50):
 
     return matches
 
-
 # === MAIN ===
 database = []
 database_loaded = False
 
 def load_database_async():
     global database, database_loaded
-    database = load_database(YAML_PATH)
+    for person in load_database(YAML_PATH):
+        database.append(person)
     database_loaded = True
 
 Thread(target=load_database_async).start()
