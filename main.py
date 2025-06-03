@@ -19,7 +19,7 @@ def resource_path(relative_path):
 
 # === CONFIG ===
 WINDOW_TITLE = 'Face Recognition'
-YAML_PATH = resource_path('database/people.yaml')
+YAML_PATH = resource_path('database/people.yml')
 
 FRAME_SKIP = 256
 MAX_THREADS = 4
