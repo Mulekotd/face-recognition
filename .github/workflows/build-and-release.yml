@@ -1,0 +1,144 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: linux-artifact
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: |
+          python -m pip install --upgrade pip wheel
+          pip install pyinstaller
+          pip install --prefer-binary -r requirements.txt
+
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            build-essential \
+            libboost-all-dev \
+            libopenblas-dev \
+            liblapack-dev \
+            libx11-dev \
+            python3-dev
+
+      - run: |
+          pyinstaller --onefile --name face-recognition --add-data "models:models" --add-data "database:database" main.py
+
+      - run: |
+          mkdir package
+          cp dist/face-recognition package/
+          tar -czvf face-recognition-${GITHUB_REF_NAME}-linux.tar.gz -C package .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifact
+          path: face-recognition-${{ github.ref_name }}-linux.tar.gz
+
+  build_macos:
+    runs-on: macos-latest
+    outputs:
+      artifact-name: macos-artifact
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: |
+          python -m pip install --upgrade pip wheel
+          pip install pyinstaller
+          pip install --prefer-binary -r requirements.txt
+
+      - run: |
+          pyinstaller --onefile --name face-recognition --add-data "models:models" --add-data "database:database" main.py
+
+      - run: |
+          mkdir package
+          cp dist/face-recognition package/
+          tar -czvf face-recognition-${GITHUB_REF_NAME}-macos.tar.gz -C package .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact
+          path: face-recognition-${{ github.ref_name }}-macos.tar.gz
+
+  build_windows:
+    runs-on: windows-latest
+    outputs:
+      artifact-name: windows-artifact
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
+          choco install visualstudio2022buildtools --confirm --install-arguments "--quiet --norestart --wait"
+          python -m pip install --upgrade pip wheel
+          pip install pyinstaller
+          pip install --prefer-binary -r requirements.txt
+
+      - run: |
+          pyinstaller --onefile --name face-recognition --add-data "models;models" --add-data "database;database" main.py
+
+      - run: |
+          mkdir package
+          cp dist/face-recognition.exe package/
+          $filename = "face-recognition-${env:GITHUB_REF_NAME}-windows.zip"
+          Compress-Archive -Path package\* -DestinationPath $filename
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact
+          path: face-recognition-${{ github.ref_name }}-windows.zip
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build_linux, build_macos, build_windows]
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: List artifacts
+        run: ls -R ./artifacts
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          find . -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec sha256sum {} \; > checksums.txt
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/**/*.zip
+            ./artifacts/**/*.tar.gz
+            ./artifacts/checksums.txt
+          body: |
+            ✅ Release ${{ github.ref_name }}
+            🗓️ Date: ${{ github.event.head_commit.timestamp }}
+            🔖 Commit: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
