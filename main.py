@@ -3,14 +3,23 @@ import dlib
 import numpy as np
 import uuid
 import yaml
+
+import sys
 import os
 
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 # === CONFIG ===
 WINDOW_TITLE = 'Face Recognition'
-YAML_PATH = 'database/people.yaml'
+YAML_PATH = resource_path('database/people.yaml')
 
 FRAME_SKIP = 256
 MAX_THREADS = 4
@@ -18,8 +27,8 @@ THRESHOLD = 0.5
 
 # === MODELOS ===
 face_detector = dlib.get_frontal_face_detector()
-shape_predictor = dlib.shape_predictor('models/shape_predictor_68_face_landmarks.dat')
-face_rec_model = dlib.face_recognition_model_v1('models/dlib_face_recognition_resnet_model_v1.dat')
+shape_predictor = dlib.shape_predictor(resource_path('models/shape_predictor_68_face_landmarks.dat'))
+face_rec_model = dlib.face_recognition_model_v1(resource_path('models/dlib_face_recognition_resnet_model_v1.dat'))
 
 # === UTILS ===
 def recognize_embedding(embedding, database, threshold=THRESHOLD):
@@ -40,7 +49,7 @@ def recognize_embedding(embedding, database, threshold=THRESHOLD):
 
 
 def process_image(image_path):
-    full_path = os.path.join('database', *image_path.split('/'))
+    full_path = resource_path(os.path.join('database', *image_path.split('/')))
     img = cv.imread(full_path)
 
     if img is None:
