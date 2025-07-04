@@ -8,24 +8,56 @@ on:
 permissions:
   contents: write
 
+env:
+  PYTHON_VERSION: '3.11'
+  APP_NAME: 'face-recognition'
+
 jobs:
-  build_linux:
+  test:
     runs-on: ubuntu-latest
-    outputs:
-      artifact-name: linux-artifact
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - run: |
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip wheel
-          pip install pyinstaller
-          pip install --prefer-binary -r requirements.txt
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8
 
-      - run: |
+      - name: Lint with flake8
+        run: |
+          flake8 src/ main.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src/ main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest tests/ --cov=src --cov-report=xml --cov-report=html || true
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  build_linux:
+    needs: test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
           sudo apt-get update
           sudo apt-get install -y \
             cmake \
@@ -34,86 +66,190 @@ jobs:
             libopenblas-dev \
             liblapack-dev \
             libx11-dev \
-            python3-dev
+            libgtk-3-dev \
+            python3-dev \
+            pkg-config
 
-      - run: |
-          pyinstaller --onefile --name face-recognition --add-data "models:models" --add-data "database:database" main.py
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install pyinstaller
+          pip install --prefer-binary -r requirements.txt
 
-      - run: |
-          mkdir package
-          cp dist/face-recognition package/
-          tar -czvf face-recognition-${GITHUB_REF_NAME}-linux.tar.gz -C package .
+      - name: Verify project structure
+        run: |
+          ls -la
+          ls -la src/
+          python -c "import sys; sys.path.append('.'); from src.config import *; print('Config loaded successfully')"
 
-      - uses: actions/upload-artifact@v4
+      - name: Build executable
+        run: |
+          pyinstaller \
+            --onefile \
+            --name ${{ env.APP_NAME }} \
+            --add-data "models:models" \
+            --add-data "database:database" \
+            --add-data "src:src" \
+            --hidden-import=src.config \
+            --hidden-import=src.utils \
+            --hidden-import=src.face_detector \
+            --hidden-import=src.face_recognizer \
+            --hidden-import=src.database_manager \
+            --hidden-import=src.fps_calculator \
+            --hidden-import=src.ui_renderer \
+            --hidden-import=src.window_manager \
+            --collect-all=cv2 \
+            --collect-all=dlib \
+            --collect-all=numpy \
+            --console \
+            main.py
+
+      - name: Create package
+        run: |
+          mkdir -p package
+          cp dist/${{ env.APP_NAME }} package/
+          cp README.md package/ 2>/dev/null || echo "README not found"
+          cp LICENSE package/ 2>/dev/null || echo "LICENSE not found"
+          tar -czvf ${{ env.APP_NAME }}-${GITHUB_REF_NAME}-linux-x86_64.tar.gz -C package .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: linux-artifact
-          path: face-recognition-${{ github.ref_name }}-linux.tar.gz
+          path: ${{ env.APP_NAME }}-${{ github.ref_name }}-linux-x86_64.tar.gz
 
   build_macos:
+    needs: test
     runs-on: macos-latest
-    outputs:
-      artifact-name: macos-artifact
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - run: |
+      - name: Install system dependencies
+        run: |
+          brew install cmake boost openblas lapack
+
+      - name: Install Python dependencies
+        run: |
           python -m pip install --upgrade pip wheel
           pip install pyinstaller
           pip install --prefer-binary -r requirements.txt
 
-      - run: |
-          pyinstaller --onefile --name face-recognition --add-data "models:models" --add-data "database:database" main.py
+      - name: Verify project structure
+        run: |
+          ls -la
+          ls -la src/
+          python -c "import sys; sys.path.append('.'); from src.config import *; print('Config loaded successfully')"
 
-      - run: |
-          mkdir package
-          cp dist/face-recognition package/
-          tar -czvf face-recognition-${GITHUB_REF_NAME}-macos.tar.gz -C package .
+      - name: Build executable
+        run: |
+          pyinstaller \
+            --onefile \
+            --name ${{ env.APP_NAME }} \
+            --add-data "models:models" \
+            --add-data "database:database" \
+            --add-data "src:src" \
+            --hidden-import=src.config \
+            --hidden-import=src.utils \
+            --hidden-import=src.face_detector \
+            --hidden-import=src.face_recognizer \
+            --hidden-import=src.database_manager \
+            --hidden-import=src.fps_calculator \
+            --hidden-import=src.ui_renderer \
+            --hidden-import=src.window_manager \
+            --collect-all=cv2 \
+            --collect-all=dlib \
+            --collect-all=numpy \
+            --console \
+            main.py
 
-      - uses: actions/upload-artifact@v4
+      - name: Create package
+        run: |
+          mkdir -p package
+          cp dist/${{ env.APP_NAME }} package/
+          cp README.md package/ 2>/dev/null || echo "README not found"
+          cp LICENSE package/ 2>/dev/null || echo "LICENSE not found"
+          tar -czvf ${{ env.APP_NAME }}-${GITHUB_REF_NAME}-macos-x86_64.tar.gz -C package .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
-          path: face-recognition-${{ github.ref_name }}-macos.tar.gz
+          path: ${{ env.APP_NAME }}-${{ github.ref_name }}-macos-x86_64.tar.gz
 
   build_windows:
+    needs: test
     runs-on: windows-latest
-    outputs:
-      artifact-name: windows-artifact
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - run: |
+      - name: Install system dependencies
+        run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
           choco install visualstudio2022buildtools --confirm --install-arguments "--quiet --norestart --wait"
+
+      - name: Install Python dependencies
+        run: |
           python -m pip install --upgrade pip wheel
           pip install pyinstaller
           pip install --prefer-binary -r requirements.txt
 
-      - run: |
-          pyinstaller --onefile --name face-recognition --add-data "models;models" --add-data "database;database" main.py
+      - name: Verify project structure
+        run: |
+          dir
+          dir src\
+          python -c "import sys; sys.path.append('.'); from src.config import *; print('Config loaded successfully')"
 
-      - run: |
+      - name: Build executable
+        run: |
+          pyinstaller `
+            --onefile `
+            --name ${{ env.APP_NAME }} `
+            --add-data "models;models" `
+            --add-data "database;database" `
+            --add-data "src;src" `
+            --hidden-import=src.config `
+            --hidden-import=src.utils `
+            --hidden-import=src.face_detector `
+            --hidden-import=src.face_recognizer `
+            --hidden-import=src.database_manager `
+            --hidden-import=src.fps_calculator `
+            --hidden-import=src.ui_renderer `
+            --hidden-import=src.window_manager `
+            --collect-all=cv2 `
+            --collect-all=dlib `
+            --collect-all=numpy `
+            --console `
+            main.py
+
+      - name: Create package
+        run: |
           mkdir package
-          cp dist/face-recognition.exe package/
-          $filename = "face-recognition-${env:GITHUB_REF_NAME}-windows.zip"
+          cp dist/${{ env.APP_NAME }}.exe package/
+          if (Test-Path "README.md") { cp README.md package/ }
+          if (Test-Path "LICENSE") { cp LICENSE package/ }
+          $filename = "${{ env.APP_NAME }}-$env:GITHUB_REF_NAME-windows-x86_64.zip"
           Compress-Archive -Path package\* -DestinationPath $filename
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
-          path: face-recognition-${{ github.ref_name }}-windows.zip
+          path: ${{ env.APP_NAME }}-${{ github.ref_name }}-windows-x86_64.zip
 
   release:
     runs-on: ubuntu-latest
     needs: [build_linux, build_macos, build_windows]
-
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -121,24 +257,97 @@ jobs:
           path: ./artifacts
 
       - name: List artifacts
-        run: ls -R ./artifacts
+        run: |
+          echo "=== Artifacts Structure ==="
+          find ./artifacts -type f -name "*" | sort
+          echo "=========================="
+
+      - name: Move artifacts to root
+        run: |
+          find ./artifacts -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec mv {} . \;
 
       - name: Generate checksums
         run: |
-          cd artifacts
-          find . -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec sha256sum {} \; > checksums.txt
-          cd ..
+          echo "=== Generating Checksums ==="
+          for file in *.zip *.tar.gz; do
+            if [ -f "$file" ]; then
+              echo "Processing: $file"
+              sha256sum "$file" >> checksums.txt
+            fi
+          done
+          echo "=== Checksums Generated ==="
+          cat checksums.txt
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Face Recognition ${{ steps.version.outputs.tag }}"
           files: |
-            ./artifacts/**/*.zip
-            ./artifacts/**/*.tar.gz
-            ./artifacts/checksums.txt
+            *.zip
+            *.tar.gz
+            checksums.txt
           body: |
-            ✅ Release ${{ github.ref_name }}
-            🗓️ Date: ${{ github.event.head_commit.timestamp }}
-            🔖 Commit: ${{ github.sha }}
+            ## 🚀 Face Recognition ${{ steps.version.outputs.tag }}
+            
+            ### 📋 Features
+            - Real-time face detection and recognition
+            - Cross-platform support (Linux, macOS, Windows)
+            
+            ### 📦 Downloads
+            - **Linux**: `${{ env.APP_NAME }}-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz`
+            - **macOS**: `${{ env.APP_NAME }}-${{ steps.version.outputs.tag }}-macos-x86_64.tar.gz`
+            - **Windows**: `${{ env.APP_NAME }}-${{ steps.version.outputs.tag }}-windows-x86_64.zip`
+            
+            ### 🔧 Installation
+            1. Download the appropriate package for your OS
+            2. Extract the archive
+            3. Run the executable
+
+            ### 🎯 Usage
+            - Press **ESC** to exit
+            - Resize window as needed - the application will adapt automatically
+            - The system will display FPS and performance information
+            
+            ### 📊 System Requirements
+            - Camera/webcam
+            - Models folder with dlib face recognition models
+            - Database folder with people.yml configuration
+            
+            ### 🔒 Security
+            **SHA256 Checksums:**
+            ```
+            $(cat checksums.txt)
+            ```
+            
+            ---
+            
+            **Build Information:**
+            - 🗓️ **Date**: ${{ github.event.head_commit.timestamp }}
+            - 🔖 **Commit**: ${{ github.sha }}
+            - 🏗️ **Workflow**: ${{ github.run_number }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    if: always()
+    steps:
+      - name: Clean up artifacts
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: |
+            linux-artifact
+            macos-artifact
+            windows-artifact
+          failOnError: false
