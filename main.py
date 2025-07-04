@@ -100,13 +100,6 @@ def main():
         # Render UI on original frame
         ui_renderer.draw_face_rectangles(display_frame, scaled_face_data)
         ui_renderer.draw_fps(display_frame, current_fps)
-        ui_renderer.draw_performance_info(display_frame, database_manager.is_database_loaded(), len(face_data_list))
-        
-        # Add window size info
-        scale_factor = window_manager.get_scale_factor()
-        window_info = f"Scale: {scale_factor:.2f}x | Size: {window_manager.current_width}x{window_manager.current_height}"
-        cv.putText(display_frame, window_info, (10, display_frame.shape[0] - 40), 
-                  cv.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
         
         # Resize frame to fit window
         final_frame = window_manager.resize_frame(display_frame)

@@ -19,21 +19,6 @@ class UIRenderer:
         cv.putText(frame, fps_text, (x, y), font, font_scale, (0, 255, 0), thickness)
     
     @staticmethod
-    def draw_performance_info(frame, database_loaded, face_count):
-        info_lines = [
-            f"DB: {'Loaded' if database_loaded else 'Loading...'}",
-            f"Faces: {face_count}"
-        ]
-        
-        font = cv.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.5
-        thickness = 1
-        
-        for i, line in enumerate(info_lines):
-            y = 30 + i * 20
-            cv.putText(frame, line, (10, y), font, font_scale, (255, 255, 255), thickness)
-    
-    @staticmethod
     def get_face_color(name):
         if name == "Loading...":
             return (0, 255, 255)

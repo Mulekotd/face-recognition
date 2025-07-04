@@ -52,20 +52,20 @@ cd face-recognition
 ### 2. Create and Activate a Virtual Environment
 
 ```bash
-py -m venv env
+python -m venv env
 .\env\Scripts\activate
 ```
 
 ### 3. Install Dependencies
 
 ```bash
-py -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 4. Run the Project
 
 ```bash
-py main.py
+python main.py
 ```
 
 ### 🤝 Feedback and Contributions

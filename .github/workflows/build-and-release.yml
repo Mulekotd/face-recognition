@@ -318,21 +318,13 @@ jobs:
             
             ### 📊 System Requirements
             - Camera/webcam
-            - Models folder with dlib face recognition models
-            - Database folder with people.yml configuration
-            
-            ### 🔒 Security
-            **SHA256 Checksums:**
-            ```
-            $(cat checksums.txt)
-            ```
             
             ---
             
             **Build Information:**
             - 🗓️ **Date**: ${{ github.event.head_commit.timestamp }}
             - 🔖 **Commit**: ${{ github.sha }}
-            - 🏗️ **Workflow**: ${{ github.run_number }}
+            - 👤 **Author**: ${{ github.event.head_commit.author.name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
