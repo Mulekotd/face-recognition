@@ -7,13 +7,14 @@ from .config import resource_path, MAX_THREADS
 from .face_detector import FaceDetector
 from .face_recognizer import FaceRecognizer
 
+
 class DatabaseManager:
     def __init__(self):
         self.face_detector = FaceDetector()
         self.face_recognizer = FaceRecognizer()
         self.database = []
         self.database_loaded = False
-    
+
     def process_image(self, image_path):
         full_path = resource_path(os.path.join('database', *image_path.split('/')))
         img = cv.imread(full_path)
@@ -32,7 +33,7 @@ class DatabaseManager:
         face_descriptor = self.face_recognizer.compute_face_descriptor(rgb_img, shape)
 
         return face_descriptor
-    
+
     def load_database(self, yaml_path):
         with open(yaml_path, 'r', encoding='utf-8') as f:
             people = yaml.safe_load(f)
@@ -50,15 +51,15 @@ class DatabaseManager:
 
             person['embeddings'] = embeddings
             yield person
-    
+
     def load_database_async(self, yaml_path):
         for person in self.load_database(yaml_path):
             self.database.append(person)
 
         self.database_loaded = True
-    
+
     def get_database(self):
         return self.database
-    
+
     def is_database_loaded(self):
         return self.database_loaded

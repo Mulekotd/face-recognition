@@ -1,12 +1,12 @@
-import numpy as np
 import dlib
+
 
 def match_faces(previous_faces, current_dets, max_distance=80):
     matches = []
 
     for det in current_dets:
         x, y = det.left(), det.top()
-        
+
         best_match = None
         best_distance = float('inf')
 
@@ -35,5 +35,5 @@ def adjust_detection_coordinates(dets, scale_factor):
             int(det.bottom() / scale_factor)
         )
         adjusted_dets.append(adjusted_det)
-        
+
     return adjusted_dets
