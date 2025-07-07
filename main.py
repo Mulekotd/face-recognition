@@ -48,7 +48,7 @@ def main():  # noqa: C901 – complexity intentionally accepted
     cam.set(cv.CAP_PROP_BUFFERSIZE, CAMERA_BUFFER_SIZE)
 
     frame_count = 0
-    face_data_list = []
+    tracked_faces = []
 
     # --- Main loop -----------------------------------------------------------------------------
     while True:
@@ -69,7 +69,7 @@ def main():  # noqa: C901 – complexity intentionally accepted
             dets = face_detector.detect_faces(frame)
             adjusted_dets = adjust_detection_coordinates(dets, FACE_DETECTION_SCALE)
 
-            matches = match_faces(face_data_list, adjusted_dets)
+            matches = match_faces(tracked_faces, adjusted_dets)
             updated_face_data = []
             rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
@@ -101,17 +101,17 @@ def main():  # noqa: C901 – complexity intentionally accepted
 
                 updated_face_data.append(face_data)
 
-            face_data_list = updated_face_data
+            tracked_faces = updated_face_data
 
             # Limit face cache size
-            if len(face_data_list) > MAX_FACES_CACHE:
-                face_data_list = face_data_list[-MAX_FACES_CACHE:]
+            if len(tracked_faces) > MAX_FACES_CACHE:
+                tracked_faces = tracked_faces[-MAX_FACES_CACHE:]
 
         # --- Rendering --------------------------------------------------------------------------
         display_frame = frame.copy()
 
         # Use original rects (no need to scale back)
-        ui_renderer.draw_face_rectangles(display_frame, face_data_list)
+        ui_renderer.draw_face_rectangles(display_frame, tracked_faces)
         ui_renderer.draw_fps(display_frame, current_fps)
 
         # Resize frame to fit the current window size

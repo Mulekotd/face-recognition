@@ -26,7 +26,7 @@ Used for efficient numerical computations, especially for handling face embeddin
 
 Used for image and video capture, as well as for rendering bounding boxes and text overlays on detected faces.
 
-![OpenCV](https://static-00.iconduck.com/assets.00/opencv-icon-414x512-d2gfjzmg.png)
+![OpenCV](https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/OpenCV_Logo_with_text.png/250px-OpenCV_Logo_with_text.png)
 
 ---
 
