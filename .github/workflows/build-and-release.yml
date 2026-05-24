@@ -76,6 +76,11 @@ jobs:
           pip install pyinstaller
           pip install --prefer-binary -r requirements.txt
 
+      - name: Prepare bundled data
+        run: |
+          mkdir -p database
+          test -f database/people.yml || printf "[]\n" > database/people.yml
+
       - name: Verify project structure
         run: |
           ls -la
@@ -142,6 +147,11 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install pyinstaller
           pip install --prefer-binary -r requirements.txt
+
+      - name: Prepare bundled data
+        run: |
+          mkdir -p database
+          test -f database/people.yml || printf "[]\n" > database/people.yml
 
       - name: Verify project structure
         run: |
@@ -210,6 +220,16 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install pyinstaller
           pip install --prefer-binary -r requirements.txt
+
+      - name: Prepare bundled data
+        run: |
+          if (!(Test-Path "database")) {
+            New-Item -ItemType Directory -Path "database" | Out-Null
+          }
+
+          if (!(Test-Path "database/people.yml")) {
+            Set-Content -Path "database/people.yml" -Value "[]"
+          }
 
       - name: Verify project structure
         run: |
