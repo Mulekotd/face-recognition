@@ -80,7 +80,7 @@ jobs:
         run: |
           ls -la
           ls -la src/
-          python -c "import sys; sys.path.append('.'); from src.config import *; print('Config loaded successfully')"
+          python -c "import sys; sys.path.append('.'); import main; import src.camera.camera_manager; print('Project imports loaded successfully')"
 
       - name: Build executable
         run: |
@@ -90,14 +90,18 @@ jobs:
             --add-data "models:models" \
             --add-data "database:database" \
             --add-data "src:src" \
-            --hidden-import=src.config \
-            --hidden-import=src.utils \
-            --hidden-import=src.face_detector \
-            --hidden-import=src.face_recognizer \
-            --hidden-import=src.database_manager \
-            --hidden-import=src.fps_calculator \
-            --hidden-import=src.ui_renderer \
-            --hidden-import=src.window_manager \
+            --hidden-import=src.camera.camera_manager \
+            --hidden-import=src.common.constants \
+            --hidden-import=src.common.fps_calculator \
+            --hidden-import=src.common.geometry \
+            --hidden-import=src.common.path \
+            --hidden-import=src.common.snowflake \
+            --hidden-import=src.storage.database_manager \
+            --hidden-import=src.tracking.face_tracker \
+            --hidden-import=src.ui.renderer \
+            --hidden-import=src.ui.window_manager \
+            --hidden-import=src.vision.face_detector \
+            --hidden-import=src.vision.face_recognizer \
             --collect-all=cv2 \
             --collect-all=dlib \
             --collect-all=numpy \
@@ -143,7 +147,7 @@ jobs:
         run: |
           ls -la
           ls -la src/
-          python -c "import sys; sys.path.append('.'); from src.config import *; print('Config loaded successfully')"
+          python -c "import sys; sys.path.append('.'); import main; import src.camera.camera_manager; print('Project imports loaded successfully')"
 
       - name: Build executable
         run: |
@@ -153,14 +157,18 @@ jobs:
             --add-data "models:models" \
             --add-data "database:database" \
             --add-data "src:src" \
-            --hidden-import=src.config \
-            --hidden-import=src.utils \
-            --hidden-import=src.face_detector \
-            --hidden-import=src.face_recognizer \
-            --hidden-import=src.database_manager \
-            --hidden-import=src.fps_calculator \
-            --hidden-import=src.ui_renderer \
-            --hidden-import=src.window_manager \
+            --hidden-import=src.camera.camera_manager \
+            --hidden-import=src.common.constants \
+            --hidden-import=src.common.fps_calculator \
+            --hidden-import=src.common.geometry \
+            --hidden-import=src.common.path \
+            --hidden-import=src.common.snowflake \
+            --hidden-import=src.storage.database_manager \
+            --hidden-import=src.tracking.face_tracker \
+            --hidden-import=src.ui.renderer \
+            --hidden-import=src.ui.window_manager \
+            --hidden-import=src.vision.face_detector \
+            --hidden-import=src.vision.face_recognizer \
             --collect-all=cv2 \
             --collect-all=dlib \
             --collect-all=numpy \
@@ -207,7 +215,7 @@ jobs:
         run: |
           dir
           dir src\
-          python -c "import sys; sys.path.append('.'); from src.config import *; print('Config loaded successfully')"
+          python -c "import sys; sys.path.append('.'); import main; import src.camera.camera_manager; print('Project imports loaded successfully')"
 
       - name: Build executable
         run: |
@@ -217,14 +225,18 @@ jobs:
             --add-data "models;models" `
             --add-data "database;database" `
             --add-data "src;src" `
-            --hidden-import=src.config `
-            --hidden-import=src.utils `
-            --hidden-import=src.face_detector `
-            --hidden-import=src.face_recognizer `
-            --hidden-import=src.database_manager `
-            --hidden-import=src.fps_calculator `
-            --hidden-import=src.ui_renderer `
-            --hidden-import=src.window_manager `
+            --hidden-import=src.camera.camera_manager `
+            --hidden-import=src.common.constants `
+            --hidden-import=src.common.fps_calculator `
+            --hidden-import=src.common.geometry `
+            --hidden-import=src.common.path `
+            --hidden-import=src.common.snowflake `
+            --hidden-import=src.storage.database_manager `
+            --hidden-import=src.tracking.face_tracker `
+            --hidden-import=src.ui.renderer `
+            --hidden-import=src.ui.window_manager `
+            --hidden-import=src.vision.face_detector `
+            --hidden-import=src.vision.face_recognizer `
             --collect-all=cv2 `
             --collect-all=dlib `
             --collect-all=numpy `

@@ -3,6 +3,12 @@ from threading import Thread
 
 import cv2 as cv
 
+from src.camera.camera_manager import (
+    CameraSettings,
+    CameraSetupError,
+    open_camera
+)
+
 from src.common.constants import (
     WINDOW_TITLE,
     CAMERA_WIDTH,
@@ -68,16 +74,29 @@ def main():  # noqa: C901 – complexity intentionally accepted
     # Load the face database asynchronously
     Thread(
         target=database_manager.load_database_async,
-        args=(YAML_PATH),
+        args=(YAML_PATH,),
         daemon=True
     ).start()
 
     # --- Camera setup -------------------------------------------------------------------------
-    cam = cv.VideoCapture(0)
-    cam.set(cv.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
-    cam.set(cv.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
-    cam.set(cv.CAP_PROP_FPS, CAMERA_FPS)
-    cam.set(cv.CAP_PROP_BUFFERSIZE, CAMERA_BUFFER_SIZE)
+    camera_settings = CameraSettings(
+        width=CAMERA_WIDTH,
+        height=CAMERA_HEIGHT,
+        fps=CAMERA_FPS,
+        buffer_size=CAMERA_BUFFER_SIZE
+    )
+
+    try:
+        camera = open_camera(camera_settings)
+    except (CameraSetupError, ValueError) as exc:
+        recognition_executor.shutdown(wait=False, cancel_futures=True)
+        window_manager.close()
+
+        raise SystemExit(f"Camera setup failed: {exc}") from exc
+
+    cam = camera.capture
+
+    print(f"Using camera source: {camera.label}")
 
     frame_count = 0
 
@@ -87,6 +106,7 @@ def main():  # noqa: C901 – complexity intentionally accepted
             ret, frame = cam.read()
 
             if not ret:
+                print(f"Camera read failed from {camera.label}.")
                 break
 
             # Update FPS counter
